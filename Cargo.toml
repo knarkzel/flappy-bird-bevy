@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bevy = { path = "../bevy", features = ["dynamic"] }
+neuralnetwork = { path = "../neuralnetwork" }
 knarkzel = "0.5"
 
 [profile.dev.package.bevy]

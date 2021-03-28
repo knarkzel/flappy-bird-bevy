@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use knarkzel::prelude::*;
 use neuralnetwork::*;
 
-use crate::{*, Timer};
 use crate::pipe::*;
+use crate::{Timer, *};
 
 use bevy::sprite::collide_aabb::collide;
 
@@ -29,60 +29,60 @@ pub struct Bird {
 #[derive(Default)]
 pub struct DeadBirds(pub Vec<Bird>);
 
-fn bird_fitness(time: Res<Time>, mut query: Query<&mut Bird>) {
-    for mut bird in query.iter_mut() {
+impl DeadBirds {
+    fn sort(&mut self) {
+        self.0
+            .sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap());
+    }
+}
+
+fn bird_fitness(mut birds: Query<&mut Bird>, time: Res<Time>) {
+    for mut bird in birds.iter_mut() {
         bird.fitness += time.delta_seconds();
     }
 }
 
+fn bird_movement(mut birds: Query<(&mut Bird, &mut Transform)>, time: Res<Time>) {
+    let delta = time.delta_seconds() * 60.0;
 
-fn bird_movement(mut query: Query<(&mut Bird, &mut Transform)>) {
-    for (mut bird, mut transform) in query.iter_mut() {
-        bird.velocity.y -= 1.0;
-        transform.translation.y += bird.velocity.y;
-        let output = bird.neural_network.output();
+    for (mut bird, mut transform) in birds.iter_mut() {
+        bird.velocity.y -= 1.0 * delta;
+        transform.translation.y += bird.velocity.y * delta;
 
         let speed = 1.0;
+        let output = bird.neural_network.output();
 
-        if let Some(value) = output.get(0) {
-            if value > &0.62 {
-                bird.velocity.y = 15.0;
-            }
+        if output[0] > 0.62 {
+            bird.velocity.y = 15.0;
         }
 
-        if let Some(value) = output.get(1) {
-            if value > &0.62 {
-                transform.translation.x += speed;
-            }
-        }
-
-        if let Some(value) = output.get(2) {
-            if value > &0.62 {
-                transform.translation.x -= speed;
-            }
+        if output[1] > 0.62 {
+            transform.translation.x += speed * delta;
+        } else {
+            transform.translation.x -= speed * delta;
         }
     }
 }
 
 fn bird_collision(
     mut commands: Commands,
-    query_bird: Query<(&Bird, &Transform, &Sprite, Entity)>,
-    query_objects: Query<(&Pipe, &Transform, &Sprite)>,
-    mut query_deadbirds: Query<&mut DeadBirds>,
+    mut deadbirds: Query<&mut DeadBirds>,
+    birds: Query<(&Bird, &Transform, &Sprite, Entity)>,
+    pipes: Query<(&Pipe, &Transform, &Sprite)>,
 ) {
-    for (bird, bird_transform, bird_sprite, bird_entity) in query_bird.iter() {
-        let a_pos = bird_transform.translation;
-        let a_size = bird_sprite.size;
+    for (bird, bird_transform, bird_sprite, bird_entity) in birds.iter() {
+        let bird_pos = bird_transform.translation;
+        let bird_size = bird_sprite.size;
 
-        for (_, object_transform, object_sprite) in query_objects.iter() {
-            let b_pos = object_transform.translation;
-            let b_size = object_sprite.size;
+        for (_, pipe_transform, pipe_sprite) in pipes.iter() {
+            let pipe_pos = pipe_transform.translation;
+            let pipe_size = pipe_sprite.size;
 
-            let bounds_x = a_pos.y > HEIGHT / 2.0 || a_pos.y < -HEIGHT / 2.0;
-            let bounds_y = a_pos.x > WIDTH / 2.0 || a_pos.x < -WIDTH / 2.0;
+            let bounds_x = bird_pos.y > HEIGHT / 2.0 || bird_pos.y < -HEIGHT / 2.0;
+            let bounds_y = bird_pos.x > WIDTH / 2.0 || bird_pos.x < -WIDTH / 2.0;
 
-            if collide(a_pos, a_size, b_pos, b_size).is_some() || bounds_x || bounds_y {
-                if let Ok(mut deadbirds) = query_deadbirds.single_mut() {
+            if collide(bird_pos, bird_size, pipe_pos, pipe_size).is_some() || bounds_x || bounds_y {
+                if let Ok(mut deadbirds) = deadbirds.single_mut() {
                     commands.entity(bird_entity).despawn();
                     deadbirds.0.push(bird.clone());
                     break;
@@ -92,35 +92,15 @@ fn bird_collision(
     }
 }
 
-fn bird_process(
-    mut query: Query<(&mut Bird, &Transform)>,
-    pipes: Query<(&Pipe, &Transform)>,
-) {
-    for (mut bird, transform) in query.iter_mut() {
-        let translation = transform.translation;
-        let bird_x = translation.x;
-        let mut closest_x = f32::MAX;
-        let (mut stored_gap, mut pipe_x) = (0.0, 0.0);
+fn bird_process(mut birds: Query<(&mut Bird, &Transform)>) {
+    for (mut bird, transform) in birds.iter_mut() {
+        let bird_pos = transform.translation;
 
-        for (pipe, transform) in pipes.iter() {
-            let position = transform.translation;
-            let (x, _y) = (position.x, position.y);
-            if x < closest_x && x > bird_x {
-                closest_x = x;
-                stored_gap = pipe.0 / HEIGHT;
-                pipe_x = x;
-            }
-        }
-
-        let position = (translation.y + HEIGHT / 2.0) / HEIGHT;
+        let position = bird_pos.y / HEIGHT;
         let speed = bird.velocity.y / 15.0;
-        let delta_x = (pipe_x - translation.x) / WIDTH;
-        bird.neural_network.process(&[
-            position,
-            speed,
-            stored_gap,
-            delta_x,
-        ]);
+
+        bird.neural_network
+            .process(&[position, speed]);
     }
 }
 
@@ -138,17 +118,16 @@ fn check_dead_birds(
             let mut random = random.single_mut().expect("No randomizer found!");
 
             // get rid of PIPES
-            pipes.iter().for_each(|(entity, _)| commands.entity(entity).despawn());
-
+            pipes
+                .iter()
+                .for_each(|(entity, _)| commands.entity(entity).despawn());
 
             // reset TIMER
             if let Ok(mut timer) = timer.single_mut() {
                 timer.0 = 2.5;
             }
 
-            deadbirds
-                .0
-                .sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap());
+            deadbirds.sort();
 
             let mut best_birds = deadbirds.0.clone().into_iter().take(50).collect_vec();
             let mut other_birds = (0..9).map(|_| best_birds.clone()).flatten().collect_vec();
@@ -162,7 +141,7 @@ fn check_dead_birds(
             let new_birds = (0..500)
                 .map(|_| {
                     let velocity = Vec2::default();
-                    let neural_network = NeuralNetwork::new(&[3, 10, 1]);
+                    let neural_network = NeuralNetwork::new(STRUCTURE, &mut random);
                     Bird {
                         velocity,
                         neural_network,
@@ -175,28 +154,9 @@ fn check_dead_birds(
             best_birds.extend(new_birds);
             deadbirds.0.clear();
 
-            for mut bird in best_birds.into_iter() {
-                bird.velocity = Vec2::default();
-                commands
-                    .spawn_bundle(SpriteBundle {
-                        material: materials.add(
-                            Color::rgb(
-                                random.rand_f32(),
-                                random.rand_f32(),
-                                random.rand_f32(),
-                            )
-                            .into(),
-                        ),
-                        transform: Transform::from_xyz(
-                            random.rand_range_f32(-WIDTH / 2.0..0.0),
-                            300.,
-                            0.,
-                        ),
-                        sprite: Sprite::new(Vec2::new(64., 64.)),
-                        ..Default::default()
-                    })
-                    .insert(bird);
-            }
+            best_birds.into_iter().map(|bird| bird.neural_network).for_each(|neural_network| {
+                spawn_bird(&mut commands, &mut materials, &mut random, neural_network);
+            })
         }
     }
 }

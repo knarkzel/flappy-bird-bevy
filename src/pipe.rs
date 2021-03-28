@@ -16,11 +16,11 @@ impl Plugin for PipePlugin {
 pub struct Pipe(pub f32);
 
 fn spawn_pipes(
-    time: Res<Time>,
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut timer: Query<&mut Timer>,
     mut random: Query<&mut Random>,
+    time: Res<Time>,
 ) {
     if let Ok(mut timer) = timer.single_mut() {
         timer.0 += time.delta_seconds();
@@ -63,14 +63,14 @@ fn spawn_pipes(
     }
 }
 
-fn move_pipes(mut query: Query<(&Pipe, &mut Transform)>) {
-    for (_, mut transform) in query.iter_mut() {
+fn move_pipes(mut pipes: Query<(&Pipe, &mut Transform)>) {
+    for (_, mut transform) in pipes.iter_mut() {
         transform.translation.x -= 3.0;
     }
 }
 
-fn despawn_pipes(mut commands: Commands, query: Query<(Entity, &Transform, &Pipe)>) {
-    for (entity, transform, _) in query.iter() {
+fn despawn_pipes(mut commands: Commands, pipes: Query<(Entity, &Transform, &Pipe)>) {
+    for (entity, transform, _) in pipes.iter() {
         if transform.translation.x < (-WIDTH - 128.0) / 2.0 {
             commands.entity(entity).despawn();
         }

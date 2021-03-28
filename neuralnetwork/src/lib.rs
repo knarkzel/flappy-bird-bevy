@@ -1,6 +1,9 @@
-use std::ops::Add;
-use std::f32::consts::E;
 use knarkzel::prelude::*;
+use std::f32::consts::E;
+
+fn sigmoid(x: f32) -> f32 {
+    1.0 / (1.0 + E.powf(-x))
+}
 
 #[derive(Debug, Default, Clone)]
 struct Node {
@@ -9,21 +12,23 @@ struct Node {
     weights: Vec<f32>,
 }
 
-impl Add for Node {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        Self {
-            data: 0.0,
-            bias: (self.bias + other.bias) / 2.0,
-            weights: self.weights,
-        }
-    }
-}
-
 impl Node {
     fn weighted(&self, weight_index: usize) -> f32 {
         self.data * self.weights[weight_index] + self.bias
+    }
+
+    fn add(&self, other: &Self) -> Self {
+        let data = 0.0;
+        let bias = (self.bias + other.bias) / 2.0;
+
+        let (first, second) = (self.weights.iter(), other.weights.iter());
+        let weights = first.zip(second).map(|(x, y)| (x + y) / 2.0).collect_vec();
+
+        Self {
+            data,
+            bias,
+            weights,
+        }
     }
 }
 
@@ -32,7 +37,7 @@ struct Layer {
     nodes: Vec<Node>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct NeuralNetwork {
     layers: Vec<Layer>,
 }
@@ -42,10 +47,12 @@ impl NeuralNetwork {
         &mut self.layers[layer].nodes[node]
     }
 
-    pub fn new(structure: &[usize]) -> Self {
-        let mut layers = vec![];
-        let mut random = Random::new();
+    fn add_layer(&mut self, layer: Layer) {
+        self.layers.push(layer);
+    }
 
+    pub fn new(structure: &[usize], random: &mut Random) -> Self {
+        let mut layers = vec![];
         for layer in structure.windows(2) {
             let amount_nodes = layer[0];
             let amount_weights = layer[1];
@@ -106,15 +113,24 @@ impl NeuralNetwork {
             .map(|node| node.data)
             .collect_vec()
     }
+}
 
-    pub fn mutate(&mut self) {
+pub trait GeneticAlgorithms {
+    fn mutate(&mut self);
+    fn crossover(&self, other: &Self) -> Self;
+}
+
+impl GeneticAlgorithms for NeuralNetwork {
+    fn mutate(&mut self) {
         let mut random = Random::new();
         for layer in 0..self.layers.len() {
             for node in 0..self.layers[layer].nodes.len() {
                 if random.rand_range(0..100) > 80 {
                     let node = self.get(layer, node);
+
                     node.bias *= random.rand_range_f32(0.5..1.0);
                     node.bias += random.rand_range_f32(0.0..0.1);
+
                     for weight in node.weights.iter_mut() {
                         *weight *= random.rand_range_f32(0.5..1.0);
                     }
@@ -123,23 +139,18 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn crossover(&self, other: &Self) -> Self {
-        let mut new_network = NeuralNetwork { layers: vec![] };
+    fn crossover(&self, other: &Self) -> Self {
+        let mut new_network = NeuralNetwork::default();
+
         for i in 0..self.layers.len() {
             let first = self.layers[i].nodes.iter();
             let second = other.layers[i].nodes.iter();
-            let mut nodes = vec![];
-            for (x, y) in first.zip(second) {
-                let node = x.clone() + y.clone();
-                nodes.push(node)
-            }
-            new_network.layers.push(Layer { nodes });
+
+            let nodes = first.zip(second).map(|(x, y)| x.add(y)).collect_vec();
+
+            new_network.add_layer(Layer { nodes });
         }
+
         new_network
     }
 }
-
-fn sigmoid(x: f32) -> f32 {
-    1.0 / (1.0 + E.powf(-x))
-}
-

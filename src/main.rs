@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use knarkzel::prelude::*;
 
-use game::{*, Timer};
 use bird::*;
-use pipe::*;
+use game::{Timer, *};
 use neuralnetwork::NeuralNetwork;
+use pipe::*;
 
 fn main() {
     App::build()
@@ -12,7 +12,7 @@ fn main() {
             title: "Flappy Bird".to_string(),
             width: WIDTH,
             height: HEIGHT,
-            resizable: false,
+            resizable: true,
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
@@ -24,40 +24,13 @@ fn main() {
 
 fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-
     commands.spawn().insert(Timer(2.5));
-
     commands.spawn().insert(DeadBirds::default());
+    commands.spawn().insert(Random::default());
 
     let mut random = Random::new();
-
-    for _ in 0..BIRDS {
-        let velocity = Vec2::default();
-        let neural_network = NeuralNetwork::new(&[4, 15, 3]);
-        commands
-            .spawn_bundle(SpriteBundle {
-                material: materials.add(
-                    Color::rgb(
-                        random.rand_f32(),
-                        random.rand_f32(),
-                        random.rand_f32(),
-                    )
-                    .into(),
-                ),
-                transform: Transform::from_xyz(
-                    random.rand_range_f32(-WIDTH / 2.0..0.0),
-                    300.0,
-                    0.0,
-                ),
-                sprite: Sprite::new(Vec2::new(64.0, 64.0)),
-                ..Default::default()
-            })
-            .insert(Bird {
-                velocity,
-                neural_network,
-                fitness: 0.0,
-            });
-    }
-
-    commands.spawn().insert(random);
+    (0..BIRDS).for_each(|_| {
+        let neural_network = NeuralNetwork::new(STRUCTURE, &mut random);
+        spawn_bird(&mut commands, &mut materials, &mut random, neural_network);
+    });
 }

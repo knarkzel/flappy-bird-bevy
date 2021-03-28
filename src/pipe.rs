@@ -13,7 +13,13 @@ impl Plugin for PipePlugin {
     }
 }
 
-pub struct Pipe(pub f32);
+#[derive(PartialEq)]
+pub enum PipeType {
+    Top,
+    Bottom,
+}
+
+pub struct Pipe(pub PipeType);
 
 fn spawn_pipes(
     mut commands: Commands,
@@ -27,7 +33,6 @@ fn spawn_pipes(
         if timer.0 > 2.5 {
             timer.0 = 0.0;
 
-            let width = 64.0 * 2.0;
             let height = 64.0 * 7.5;
             let color = Color::rgb(0.44, 0.81, 0.42);
 
@@ -38,27 +43,25 @@ fn spawn_pipes(
             let gap_top = 64.0 * random;
             let gap_bottom = 64.0 * (difficulty as f32 - random);
 
-            let (x1, y1) = ((WIDTH + width) / 2.0, (-HEIGHT + height) / 2.0 - gap_bottom);
-            let (x2, y2) = ((WIDTH + width) / 2.0, (HEIGHT - height) / 2.0 + gap_top);
+            let (x1, y1) = ((WIDTH + PIPE_WIDTH) / 2.0, (-HEIGHT + height) / 2.0 - gap_bottom);
+            let (x2, y2) = ((WIDTH + PIPE_WIDTH) / 2.0, (HEIGHT - height) / 2.0 + gap_top);
 
             let pipe_bottom = SpriteBundle {
                 material: materials.add(color.into()),
                 transform: Transform::from_xyz(x1, y1, 0.),
-                sprite: Sprite::new(Vec2::new(width, height)),
+                sprite: Sprite::new(Vec2::new(PIPE_WIDTH, height)),
                 ..Default::default()
             };
 
             let pipe_top = SpriteBundle {
                 material: materials.add(color.into()),
                 transform: Transform::from_xyz(x2, y2, 0.),
-                sprite: Sprite::new(Vec2::new(width, height)),
+                sprite: Sprite::new(Vec2::new(PIPE_WIDTH, height)),
                 ..Default::default()
             };
 
-            let gap_y = y2 - (height + gap_top + gap_bottom) / 2.0;
-
-            commands.spawn_bundle(pipe_top).insert(Pipe(gap_y));
-            commands.spawn_bundle(pipe_bottom).insert(Pipe(gap_y));
+            commands.spawn_bundle(pipe_top).insert(Pipe(PipeType::Top));
+            commands.spawn_bundle(pipe_bottom).insert(Pipe(PipeType::Bottom));
         }
     }
 }

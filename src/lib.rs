@@ -9,13 +9,16 @@ pub mod pipe;
 pub const WIDTH: f32 = 1280.0;
 pub const HEIGHT: f32 = 960.0;
 pub const BIRDS: usize = 1000;
-pub const STRUCTURE: &[usize] = &[4, 10, 2];
+pub const STRUCTURE: &[usize] = &[5, 10, 2];
+
+pub const PIPE_WIDTH: f32 = 64.0 * 2.0;
 
 #[derive(Default)]
 pub struct Timer(pub f32);
 
 pub fn spawn_bird(commands: &mut Commands, materials: &mut ResMut<Assets<ColorMaterial>>, random: &mut Random, neural_network: NeuralNetwork) {
     let fitness = 0.0;
+    let multiplier = 0.0;
     let velocity = Vec2::default();
 
     commands
@@ -29,6 +32,7 @@ pub fn spawn_bird(commands: &mut Commands, materials: &mut ResMut<Assets<ColorMa
         })
         .insert(Bird {
             velocity,
+            multiplier,
             neural_network,
             fitness,
         });

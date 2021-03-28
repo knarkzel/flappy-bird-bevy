@@ -19,9 +19,10 @@ fn spawn_pipes(
     time: Res<Time>,
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut query: Query<&mut Timer>,
+    mut timer: Query<&mut Timer>,
+    mut random: Query<&mut Random>,
 ) {
-    if let Ok(mut timer) = query.single_mut() {
+    if let Ok(mut timer) = timer.single_mut() {
         timer.0 += time.delta_seconds();
         if timer.0 > 2.5 {
             timer.0 = 0.0;
@@ -30,7 +31,7 @@ fn spawn_pipes(
             let height = 64.0 * 7.5;
             let color = Color::rgb(0.44, 0.81, 0.42);
 
-            let mut random = Random::default();
+            let mut random = random.single_mut().expect("Failed to get random");
 
             let difficulty = 5;
             let random = random.rand_range(0..difficulty) as f32;

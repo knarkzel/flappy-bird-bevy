@@ -27,8 +27,6 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
 
     commands.spawn().insert(Timer(2.5));
 
-    commands.spawn().insert(Randomizer::default());
-
     commands.spawn().insert(DeadBirds::default());
 
     let mut random = Random::new();
@@ -40,18 +38,18 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
             .spawn_bundle(SpriteBundle {
                 material: materials.add(
                     Color::rgb(
-                        random.rand_float() as f32,
-                        random.rand_float() as f32,
-                        random.rand_float() as f32,
+                        random.rand_f32(),
+                        random.rand_f32(),
+                        random.rand_f32(),
                     )
                     .into(),
                 ),
                 transform: Transform::from_xyz(
-                    random.rand_range_float((-WIDTH / 2.0) as f64..0.0) as f32,
-                    300.,
-                    0.,
+                    random.rand_range_f32(-WIDTH / 2.0..0.0),
+                    300.0,
+                    0.0,
                 ),
-                sprite: Sprite::new(Vec2::new(64., 64.)),
+                sprite: Sprite::new(Vec2::new(64.0, 64.0)),
                 ..Default::default()
             })
             .insert(Bird {
@@ -60,4 +58,6 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
                 fitness: 0.0,
             });
     }
+
+    commands.spawn().insert(random);
 }

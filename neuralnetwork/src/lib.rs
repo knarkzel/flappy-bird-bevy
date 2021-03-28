@@ -1,12 +1,12 @@
 use std::ops::Add;
-use std::f64::consts::E;
+use std::f32::consts::E;
 use knarkzel::prelude::*;
 
 #[derive(Debug, Default, Clone)]
 struct Node {
-    data: f64,
-    bias: f64,
-    weights: Vec<f64>,
+    data: f32,
+    bias: f32,
+    weights: Vec<f32>,
 }
 
 impl Add for Node {
@@ -22,7 +22,7 @@ impl Add for Node {
 }
 
 impl Node {
-    fn weighted(&self, weight_index: usize) -> f64 {
+    fn weighted(&self, weight_index: usize) -> f32 {
         self.data * self.weights[weight_index] + self.bias
     }
 }
@@ -53,9 +53,9 @@ impl NeuralNetwork {
             let nodes = (0..amount_nodes)
                 .map(|_| {
                     let data = 0.0;
-                    let bias = random.rand_range_float(-1.0..1.0);
+                    let bias = random.rand_range_f32(-1.0..1.0);
                     let weights = (0..amount_weights)
-                        .map(|_| random.rand_range_float(-1.0..1.0))
+                        .map(|_| random.rand_range_f32(-1.0..1.0))
                         .collect_vec();
 
                     Node {
@@ -76,7 +76,7 @@ impl NeuralNetwork {
         NeuralNetwork { layers }
     }
 
-    pub fn process(&mut self, input: &[f64]) {
+    pub fn process(&mut self, input: &[f32]) {
         for (i, data) in input.into_iter().enumerate() {
             if let Some(node) = self.layers[0].nodes.get_mut(i) {
                 node.data = *data;
@@ -97,7 +97,7 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn output(&self) -> Vec<f64> {
+    pub fn output(&self) -> Vec<f32> {
         self.layers
             .last()
             .unwrap()
@@ -113,10 +113,10 @@ impl NeuralNetwork {
             for node in 0..self.layers[layer].nodes.len() {
                 if random.rand_range(0..100) > 80 {
                     let node = self.get(layer, node);
-                    node.bias *= random.rand_range_float(0.5..1.0);
-                    node.bias += random.rand_range_float(0.0..0.1);
+                    node.bias *= random.rand_range_f32(0.5..1.0);
+                    node.bias += random.rand_range_f32(0.0..0.1);
                     for weight in node.weights.iter_mut() {
-                        *weight *= random.rand_range_float(0.5..1.0);
+                        *weight *= random.rand_range_f32(0.5..1.0);
                     }
                 }
             }
@@ -139,7 +139,7 @@ impl NeuralNetwork {
     }
 }
 
-fn sigmoid(x: f64) -> f64 {
+fn sigmoid(x: f32) -> f32 {
     1.0 / (1.0 + E.powf(-x))
 }
 

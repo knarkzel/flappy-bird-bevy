@@ -5,4 +5,4 @@ authors = ["Knarkzel <knarkzel@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-knarkzel = "0.5.0"
+knarkzel = "0.6.0"

@@ -1858,9 +1858,9 @@ dependencies = [
 
 [[package]]
 name = "knarkzel"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bee3a319d3c34883f9a1938581c634f79009ba762025dde2944d4774a71ca31d"
+checksum = "f0e8c0daeb7fa2164511bdcb20df271a2145357c376a0e66f123aa04b2284bfb"
 dependencies = [
  "getrandom",
  "itertools",

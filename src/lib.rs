@@ -9,6 +9,3 @@ pub const BIRDS: usize = 1000;
 
 #[derive(Default)]
 pub struct Timer(pub f32);
-
-#[derive(Default)]
-pub struct Randomizer(pub Random);

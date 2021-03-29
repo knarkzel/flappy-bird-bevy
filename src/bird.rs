@@ -24,7 +24,14 @@ pub struct Bird {
     pub fitness: f32,
     pub multiplier: f32,
     pub velocity: Vec2,
+    pub size: f32,
     pub neural_network: NeuralNetwork,
+}
+
+impl Bird {
+    fn get_speed(&self) -> f32 {
+        2.0 - self.size
+    }
 }
 
 #[derive(Default)]
@@ -47,22 +54,22 @@ fn bird_movement(mut birds: Query<(&mut Bird, &mut Transform)>, time: Res<Time>)
     let delta = time.delta_seconds() * 60.0;
 
     for (mut bird, mut transform) in birds.iter_mut() {
-        bird.velocity.y -= 1.0 * delta;
-        transform.translation.y += bird.velocity.y * delta;
+        let deltaspeed = delta * bird.get_speed();
+        let bird_pos = transform.translation;
 
-        let speed = 1.0;
+        bird.velocity.y -= deltaspeed;
+        transform.translation.y += bird.velocity.y * deltaspeed;
+
+        bird.multiplier = (1.0 - (bird_pos.x / WIDTH).abs()) * 3.0;
+
         let output = bird.neural_network.output();
-
         if output[0] > 0.62 {
-            bird.velocity.y = 15.0;
+            bird.velocity.y = 15.0 * deltaspeed;
         }
-
         if output[1] > 0.62 {
-            transform.translation.x += speed * delta;
-            bird.multiplier = 1.0;
+            transform.translation.x += deltaspeed;
         } else {
-            transform.translation.x -= speed * delta;
-            bird.multiplier = -0.5;
+            transform.translation.x -= deltaspeed;
         }
     }
 }
@@ -112,21 +119,16 @@ fn bird_process(
     
     for (mut bird, transform) in birds.iter_mut() {
         let bird_pos = transform.translation;
+        let y = bird_pos.y / HEIGHT;
 
-        let position = bird_pos.y / HEIGHT;
-        let speed = bird.velocity.y / 15.0;
         let valid_pipes = data.iter().filter(|(x, _)| *x + PIPE_WIDTH > bird_pos.x).collect_vec();
-
         let (top, bottom) = if valid_pipes.len() >= 2 {
             (valid_pipes[0].1 / HEIGHT, valid_pipes[1].1 / HEIGHT)
         } else {
             (0.0, 0.0)
         };
 
-        let gap = (top + bottom) / 2.0;
-
-        bird.neural_network
-            .process(&[position, speed, top, bottom, gap]);
+        bird.neural_network.process(&[y, top, bottom]);
     }
 }
 
@@ -155,24 +157,28 @@ fn check_dead_birds(
 
             deadbirds.sort();
 
-            let mut best_birds = deadbirds.0.clone().into_iter().take(50).collect_vec();
-            let mut other_birds = (0..9).map(|_| best_birds.clone()).flatten().collect_vec();
+            let mut best_birds = deadbirds.0.clone().into_iter().take(10).collect_vec();
+            let mut other_birds = (0..50).map(|_| best_birds.clone()).flatten().collect_vec();
             for bird in other_birds.iter_mut() {
-                let mut new_network = bird.neural_network.crossover(&best_birds[0].neural_network);
+                let random_bird = random.rand_range(0..3) as usize;
+                bird.size = (best_birds[random_bird].size + bird.size) / 2.0;
+
+                let mut new_network = bird.neural_network.crossover(&best_birds[random_bird].neural_network);
                 new_network.mutate();
                 bird.neural_network = new_network;
             }
 
             // NEW BIRDS
-            let new_birds = (0..500)
+            let new_birds = (0..1000 - (best_birds.len() + other_birds.len()))
                 .map(|_| {
                     let velocity = Vec2::default();
-                    let multiplier = 0.0;
+                    let size = random.rand_range_f32(1.0 - SIZE_DELTA..1.0 + SIZE_DELTA);
                     let neural_network = NeuralNetwork::new(STRUCTURE, &mut random);
                     Bird {
                         velocity,
-                        multiplier,
                         neural_network,
+                        size,
+                        multiplier: 0.0,
                         fitness: 0.0,
                     }
                 })
@@ -182,8 +188,10 @@ fn check_dead_birds(
             best_birds.extend(new_birds);
             deadbirds.0.clear();
 
-            best_birds.into_iter().map(|bird| bird.neural_network).for_each(|neural_network| {
-                spawn_bird(&mut commands, &mut materials, &mut random, neural_network);
+            dbg!(&best_birds.len());
+
+            best_birds.into_iter().for_each(|bird| {
+                spawn_bird(&mut commands, &mut materials, &mut random, bird.neural_network, bird.size);
             })
         }
     }

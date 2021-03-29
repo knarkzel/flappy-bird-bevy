@@ -31,6 +31,7 @@ fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     let mut random = Random::new();
     (0..BIRDS).for_each(|_| {
         let neural_network = NeuralNetwork::new(STRUCTURE, &mut random);
-        spawn_bird(&mut commands, &mut materials, &mut random, neural_network);
+        let size = random.rand_range_f32(1.0 - SIZE_DELTA..1.0 + SIZE_DELTA);
+        spawn_bird(&mut commands, &mut materials, &mut random, neural_network, size);
     });
 }

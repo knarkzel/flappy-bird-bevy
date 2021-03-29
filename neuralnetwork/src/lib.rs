@@ -85,9 +85,8 @@ impl NeuralNetwork {
 
     pub fn process(&mut self, input: &[f32]) {
         for (i, data) in input.into_iter().enumerate() {
-            if let Some(node) = self.layers[0].nodes.get_mut(i) {
-                node.data = *data;
-            }
+            let node = self.layers[0].nodes.get_mut(i).expect("Too much input passed");
+            node.data = *data;
         }
 
         // i -> current layer

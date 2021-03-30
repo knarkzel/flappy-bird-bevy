@@ -50,8 +50,10 @@ fn bird_fitness(mut birds: Query<&mut Bird>, time: Res<Time>) {
     }
 }
 
-fn bird_movement(mut birds: Query<(&mut Bird, &mut Transform)>, time: Res<Time>) {
+fn bird_movement(mut birds: Query<(&mut Bird, &mut Transform)>, time: Res<Time>, windows: Res<Windows>) {
     let delta = time.delta_seconds() * 60.0;
+    let window = windows.get_primary().unwrap();
+    let (width, _height) = (window.width(), window.height());
 
     for (mut bird, mut transform) in birds.iter_mut() {
         let deltaspeed = delta * bird.get_speed();
@@ -60,15 +62,16 @@ fn bird_movement(mut birds: Query<(&mut Bird, &mut Transform)>, time: Res<Time>)
         bird.velocity.y -= deltaspeed;
         transform.translation.y += bird.velocity.y * deltaspeed;
 
-        bird.multiplier = (1.0 - (bird_pos.x / WIDTH).abs()) * 3.0;
+        bird.multiplier = (1.0 - (bird_pos.x / width).abs()) * 5.0;
 
         let output = bird.neural_network.output();
-        if output[0] > 0.62 {
+        if output[0] > 0.6 {
             bird.velocity.y = 15.0 * deltaspeed;
         }
-        if output[1] > 0.62 {
+        if output[1] > 0.6 {
             transform.translation.x += deltaspeed;
-        } else {
+        }
+        if output[2] > 0.6 {
             transform.translation.x -= deltaspeed;
         }
     }
@@ -79,7 +82,11 @@ fn bird_collision(
     mut deadbirds: Query<&mut DeadBirds>,
     birds: Query<(&Bird, &Transform, &Sprite, Entity)>,
     pipes: Query<(&Pipe, &Transform, &Sprite)>,
+    windows: Res<Windows>,
 ) {
+    let window = windows.get_primary().unwrap();
+    let (width, height) = (window.width(), window.height());
+
     for (bird, bird_transform, bird_sprite, bird_entity) in birds.iter() {
         let bird_pos = bird_transform.translation;
         let bird_size = bird_sprite.size;
@@ -88,8 +95,8 @@ fn bird_collision(
             let pipe_pos = pipe_transform.translation;
             let pipe_size = pipe_sprite.size;
 
-            let bounds_x = bird_pos.y > HEIGHT / 2.0 || bird_pos.y < -HEIGHT / 2.0;
-            let bounds_y = bird_pos.x > WIDTH / 2.0 || bird_pos.x < -WIDTH / 2.0;
+            let bounds_x = bird_pos.y > height / 2.0 || bird_pos.y < -height / 2.0;
+            let bounds_y = bird_pos.x > width / 2.0 || bird_pos.x < -width / 2.0;
 
             if collide(bird_pos, bird_size, pipe_pos, pipe_size).is_some() || bounds_x || bounds_y {
                 if let Ok(mut deadbirds) = deadbirds.single_mut() {
@@ -105,7 +112,11 @@ fn bird_collision(
 fn bird_process(
     mut birds: Query<(&mut Bird, &Transform)>,
     pipes: Query<(&Pipe, &Transform, &Sprite)>,
+    windows: Res<Windows>,
 ) {
+    let window = windows.get_primary().unwrap();
+    let (_width, height) = (window.width(), window.height());
+
     // get pipe stats
     let mut data = pipes.iter().map(|(pipe, transform, sprite)| {
         let pipe_size = sprite.size;
@@ -119,11 +130,11 @@ fn bird_process(
     
     for (mut bird, transform) in birds.iter_mut() {
         let bird_pos = transform.translation;
-        let y = bird_pos.y / HEIGHT;
+        let y = bird_pos.y / height;
 
         let valid_pipes = data.iter().filter(|(x, _)| *x + PIPE_WIDTH > bird_pos.x).collect_vec();
         let (top, bottom) = if valid_pipes.len() >= 2 {
-            (valid_pipes[0].1 / HEIGHT, valid_pipes[1].1 / HEIGHT)
+            (valid_pipes[0].1 / height, valid_pipes[1].1 / height)
         } else {
             (0.0, 0.0)
         };
@@ -139,6 +150,7 @@ fn check_dead_birds(
     mut deadbirds: Query<&mut DeadBirds>,
     mut random: Query<&mut Random>,
     pipes: Query<(Entity, &Pipe)>,
+    windows: Res<Windows>,
 ) {
     // SPAWN GOOD BIRDS
     if let Ok(mut deadbirds) = deadbirds.single_mut() {
@@ -188,10 +200,12 @@ fn check_dead_birds(
             best_birds.extend(new_birds);
             deadbirds.0.clear();
 
-            dbg!(&best_birds.len());
+            // dbg!(&best_birds.len());
+            let window = windows.get_primary().unwrap();
+            let (width, height) = (window.width(), window.height());
 
             best_birds.into_iter().for_each(|bird| {
-                spawn_bird(&mut commands, &mut materials, &mut random, bird.neural_network, bird.size);
+                spawn_bird(&mut commands, &mut materials, (width, height), &mut random, bird.neural_network, bird.size);
             })
         }
     }

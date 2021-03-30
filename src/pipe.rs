@@ -27,24 +27,26 @@ fn spawn_pipes(
     mut timer: Query<&mut Timer>,
     mut random: Query<&mut Random>,
     time: Res<Time>,
+    windows: Res<Windows>,
 ) {
+    let window = windows.get_primary().unwrap();
+    let (width, height) = (window.width(), window.height());
+
     if let Ok(mut timer) = timer.single_mut() {
         timer.0 += time.delta_seconds();
         if timer.0 > 2.5 {
             timer.0 = 0.0;
 
-            let height = 64.0 * 7.5;
             let color = Color::rgb(0.44, 0.81, 0.42);
 
             let mut random = random.single_mut().expect("Failed to get random");
 
-            let difficulty = 5;
-            let random = random.rand_range(0..difficulty) as f32;
-            let gap_top = 64.0 * random;
-            let gap_bottom = 64.0 * (difficulty as f32 - random);
+            let gap_size = 64.0 * 5.0;
+            let random_value = random.rand_range_f32(0.0..height - gap_size);
 
-            let (x1, y1) = ((WIDTH + PIPE_WIDTH) / 2.0, (-HEIGHT + height) / 2.0 - gap_bottom);
-            let (x2, y2) = ((WIDTH + PIPE_WIDTH) / 2.0, (HEIGHT - height) / 2.0 + gap_top);
+            let x = (width + PIPE_WIDTH) / 2.0;
+            let (x1, y1) = (x, -height + random_value);
+            let (x2, y2) = (x, random_value + gap_size);
 
             let pipe_bottom = SpriteBundle {
                 material: materials.add(color.into()),
@@ -72,9 +74,12 @@ fn move_pipes(mut pipes: Query<(&Pipe, &mut Transform)>) {
     }
 }
 
-fn despawn_pipes(mut commands: Commands, pipes: Query<(Entity, &Transform, &Pipe)>) {
+fn despawn_pipes(mut commands: Commands, pipes: Query<(Entity, &Transform, &Pipe)>, windows: Res<Windows>) {
+    let window = windows.get_primary().unwrap();
+    let (width, _) = (window.width(), window.height());
+    
     for (entity, transform, _) in pipes.iter() {
-        if transform.translation.x < (-WIDTH - 128.0) / 2.0 {
+        if transform.translation.x < (-width - 128.0) / 2.0 {
             commands.entity(entity).despawn();
         }
     }

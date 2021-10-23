@@ -1,13 +1,13 @@
 [package]
-name = "game"
+name = "flappy-bird"
 version = "0.1.0"
-authors = ["Knarkzel <knarkzel@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-bevy = { path = "bevy", features = ["dynamic"] }
+# bevy = { path = "bevy", features = ["dynamic"] }
 neuralnetwork = { path = "neuralnetwork" }
 knarkzel = "0.6"
+bevy = { version = "0.5.0", features = ["dynamic"] }
 
 [profile.dev.package.bevy]
 opt-level = 1

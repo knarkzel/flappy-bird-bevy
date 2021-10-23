@@ -2,7 +2,7 @@ use knarkzel::prelude::*;
 use bevy::{prelude::*, window::WindowMode};
 
 use bird::*;
-use game::{Timer, *};
+use flappy_bird::{Timer, *};
 use neuralnetwork::NeuralNetwork;
 use pipe::*;
 

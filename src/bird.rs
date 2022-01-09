@@ -2,15 +2,15 @@ use bevy::prelude::*;
 use knarkzel::prelude::*;
 use neuralnetwork::*;
 
+use crate::*;
 use crate::pipe::*;
-use crate::{Timer, *};
 
 use bevy::sprite::collide_aabb::collide;
 
 pub struct BirdPlugin;
 
 impl Plugin for BirdPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_system(bird_movement.system())
             .add_system(bird_collision.system())
             .add_system(bird_fitness.system())
@@ -19,7 +19,7 @@ impl Plugin for BirdPlugin {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Component)]
 pub struct Bird {
     pub fitness: f32,
     pub multiplier: f32,
@@ -34,7 +34,7 @@ impl Bird {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Component)]
 pub struct DeadBirds(pub Vec<Bird>);
 
 impl DeadBirds {
@@ -89,17 +89,17 @@ fn bird_collision(
 
     for (bird, bird_transform, bird_sprite, bird_entity) in birds.iter() {
         let bird_pos = bird_transform.translation;
-        let bird_size = bird_sprite.size;
+        let bird_size = bird_sprite.custom_size.unwrap();
 
         for (_, pipe_transform, pipe_sprite) in pipes.iter() {
             let pipe_pos = pipe_transform.translation;
-            let pipe_size = pipe_sprite.size;
+            let pipe_size = pipe_sprite.custom_size.unwrap();
 
             let bounds_x = bird_pos.y > height / 2.0 || bird_pos.y < -height / 2.0;
             let bounds_y = bird_pos.x > width / 2.0 || bird_pos.x < -width / 2.0;
 
             if collide(bird_pos, bird_size, pipe_pos, pipe_size).is_some() || bounds_x || bounds_y {
-                if let Ok(mut deadbirds) = deadbirds.single_mut() {
+                if let Ok(mut deadbirds) = deadbirds.get_single_mut() {
                     commands.entity(bird_entity).despawn();
                     deadbirds.0.push(bird.clone());
                     break;
@@ -119,7 +119,7 @@ fn bird_process(
 
     // get pipe stats
     let mut data = pipes.iter().map(|(pipe, transform, sprite)| {
-        let pipe_size = sprite.size;
+        let pipe_size = sprite.custom_size.unwrap();
         let pipe_pos = transform.translation;
         match pipe.0 {
             PipeType::Top => (pipe_pos.x, pipe_pos.y - pipe_size.y),
@@ -145,17 +145,16 @@ fn bird_process(
 
 fn check_dead_birds(
     mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut timer: Query<&mut Timer>,
+    mut timer: Query<&mut crate::Timer>,
     mut deadbirds: Query<&mut DeadBirds>,
     mut random: Query<&mut Random>,
     pipes: Query<(Entity, &Pipe)>,
     windows: Res<Windows>,
 ) {
     // SPAWN GOOD BIRDS
-    if let Ok(mut deadbirds) = deadbirds.single_mut() {
+    if let Ok(mut deadbirds) = deadbirds.get_single_mut() {
         if deadbirds.0.len() >= BIRDS {
-            let mut random = random.single_mut().expect("No randomizer found!");
+            let mut random: &mut Random = &mut random.get_single_mut().expect("No randomizer found!");
 
             // get rid of PIPES
             pipes
@@ -163,7 +162,7 @@ fn check_dead_birds(
                 .for_each(|(entity, _)| commands.entity(entity).despawn());
 
             // reset TIMER
-            if let Ok(mut timer) = timer.single_mut() {
+            if let Ok(mut timer) = timer.get_single_mut() {
                 timer.0 = 2.5;
             }
 
@@ -185,7 +184,7 @@ fn check_dead_birds(
                 .map(|_| {
                     let velocity = Vec2::default();
                     let size = random.rand_range_f32(1.0 - SIZE_DELTA..1.0 + SIZE_DELTA);
-                    let neural_network = NeuralNetwork::new(STRUCTURE, &mut random);
+                    let neural_network = NeuralNetwork::new(STRUCTURE, random);
                     Bird {
                         velocity,
                         neural_network,
@@ -205,7 +204,7 @@ fn check_dead_birds(
             let (width, height) = (window.width(), window.height());
 
             best_birds.into_iter().for_each(|bird| {
-                spawn_bird(&mut commands, &mut materials, (width, height), &mut random, bird.neural_network, bird.size);
+                spawn_bird(&mut commands, (width, height), &mut random, bird.neural_network, bird.size);
             })
         }
     }

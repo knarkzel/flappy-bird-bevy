@@ -6,10 +6,10 @@ use crate::*;
 pub struct PipePlugin;
 
 impl Plugin for PipePlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_system(spawn_pipes.system())
-            .add_system(move_pipes.system())
-            .add_system(despawn_pipes.system());
+    fn build(&self, app: &mut App) {
+        app.add_system(spawn_pipes)
+            .add_system(move_pipes)
+            .add_system(despawn_pipes);
     }
 }
 
@@ -19,11 +19,11 @@ pub enum PipeType {
     Bottom,
 }
 
+#[derive(Component)]
 pub struct Pipe(pub PipeType);
 
 fn spawn_pipes(
     mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut timer: Query<&mut Timer>,
     mut random: Query<&mut Random>,
     time: Res<Time>,
@@ -32,14 +32,14 @@ fn spawn_pipes(
     let window = windows.get_primary().unwrap();
     let (width, height) = (window.width(), window.height());
 
-    if let Ok(mut timer) = timer.single_mut() {
+    if let Ok(mut timer) = timer.get_single_mut() {
         timer.0 += time.delta_seconds();
         if timer.0 > 2.5 {
             timer.0 = 0.0;
 
             let color = Color::rgb(0.44, 0.81, 0.42);
 
-            let mut random = random.single_mut().expect("Failed to get random");
+            let mut random = random.get_single_mut().expect("Failed to get random");
 
             let gap_size = 64.0 * 5.0;
             let random_value = random.rand_range_f32(0.0..height - gap_size);
@@ -49,16 +49,23 @@ fn spawn_pipes(
             let (x2, y2) = (x, random_value + gap_size);
 
             let pipe_bottom = SpriteBundle {
-                material: materials.add(color.into()),
+                sprite: Sprite {
+                    color,
+                    custom_size: Some(Vec2::new(PIPE_WIDTH, height)),
+                    ..Default::default()
+                },
                 transform: Transform::from_xyz(x1, y1, 0.),
-                sprite: Sprite::new(Vec2::new(PIPE_WIDTH, height)),
                 ..Default::default()
             };
 
             let pipe_top = SpriteBundle {
-                material: materials.add(color.into()),
+                sprite: Sprite {
+                    color,
+                    custom_size: Some(Vec2::new(PIPE_WIDTH, height)),
+                    ..Default::default()
+                       
+                },
                 transform: Transform::from_xyz(x2, y2, 0.),
-                sprite: Sprite::new(Vec2::new(PIPE_WIDTH, height)),
                 ..Default::default()
             };
 

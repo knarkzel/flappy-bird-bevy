@@ -1,5 +1,5 @@
 use knarkzel::prelude::*;
-use bevy::{prelude::*, window::WindowMode};
+use bevy::prelude::*;
 
 use bird::*;
 use flappy_bird::{Timer, *};
@@ -11,7 +11,8 @@ fn main() {
         .insert_resource(WindowDescriptor {
             title: "Flappy Bird".to_string(),
             resizable: true,
-            mode: WindowMode::Fullscreen,
+            width: 1280.0,
+            height: 720.0,
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
@@ -27,7 +28,7 @@ fn setup(mut commands: Commands) {
     commands.spawn().insert(DeadBirds::default());
     commands.spawn().insert(Random::default());
 
-    let windows = (1920.0, 1080.0);
+    let windows = (1280.0, 720.0);
     let mut random = Random::new();
     (0..BIRDS).for_each(|_| {
         let neural_network = NeuralNetwork::new(STRUCTURE, &mut random);

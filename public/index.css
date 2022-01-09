@@ -1,0 +1,33 @@
+body {
+  max-width: 1280px;
+  background: #0d0e0f;
+  color: #ebdbb2;
+  font-family: 'inter', system-ui, sans-serif;
+  font-size: 1em;
+  margin: 0 auto;
+}
+
+p {
+  margin: 0.5em 0;
+  margin-bottom: 1em;
+}
+
+h1 {
+  text-align: center;
+  margin: 20px;
+}
+
+a, a:active, a:visited {
+  color: #b16286;
+  background-color: #1d2021;
+}
+
+a:hover {
+    color: white;
+    background-color: #b16286;
+}
+
+canvas {
+  image-rendering: optimizeSpeed;
+  image-rendering: pixelated;
+}
